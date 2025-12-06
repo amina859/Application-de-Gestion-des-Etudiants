@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  # Base de données PostgreSQL
+  db-service:
+    image: postgres:15
+    container_name: db-service
+    environment:
+      POSTGRES_DB: mon_db
+      POSTGRES_USER: amina
+      POSTGRES_PASSWORD: amina123
+    volumes:
+      - posgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amina -d mon_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # PGAdmin
+  pgadmin-service:
+    image: dpage/pgadmin4
+    container_name: pgadmin-service
+    environment:
+      PGADMIN_DEFAULT_EMAIL: binetouimam@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: amina1234
+    ports:
+      - "8080:80"
+    depends_on:
+      db-service:
+        condition: service_healthy
+    restart: always
+
+  # Backend Django
+  backend-service:
+    build: .
+    container_name: backend-service
+    ports:
+      - "8000:8000"
+    depends_on:
+      db-service:
+        condition: service_healthy
+    command: >
+      bash -c "
+      python manage.py makemigrations &&
+      python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000
+      "
+    restart: always
+
+volumes:
+  posgres_data:
